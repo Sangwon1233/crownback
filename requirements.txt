@@ -1,0 +1,8 @@
+flask
+werkzeug
+face_recognition
+numpy
+opencv-python
+openai
+requests
+flask-cors
