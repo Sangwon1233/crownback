@@ -18,6 +18,7 @@ import os, math, json, base64, tempfile, shutil, concurrent.futures
 from statistics import mean
 
 from openai import OpenAI
+import google.generativeai as genai
 import cv2, numpy as np, face_recognition, requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -226,13 +227,40 @@ def gpt_call(metrics: dict) -> str:
     )
     return resp.choices[0].message.content.strip()
 
+# def gemini_call(metrics: dict) -> str:
+#     url = "https://gemini.googleapis.com/v1/models/gemini-pro:generateText"
+#     hdr = {"Authorization":f"Bearer {GEMINI_API_KEY}","Content-Type":"application/json"}
+#     body = {"prompt":{"text":json.dumps(metrics, ensure_ascii=False)},"maxOutputTokens":512}
+#     r = requests.post(url, headers=hdr, json=body, timeout=30)
+#     r.raise_for_status()
+#     return r.json()["candidates"][0]["output"].strip()
+
 def gemini_call(metrics: dict) -> str:
-    url = "https://gemini.googleapis.com/v1/models/gemini-pro:generateText"
-    hdr = {"Authorization":f"Bearer {GEMINI_API_KEY}","Content-Type":"application/json"}
-    body = {"prompt":{"text":json.dumps(metrics, ensure_ascii=False)},"maxOutputTokens":512}
-    r = requests.post(url, headers=hdr, json=body, timeout=30)
-    r.raise_for_status()
-    return r.json()["candidates"][0]["output"].strip()
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-pro')
+    
+    prompt = (
+        "당신은 동서양 관상학, 인체 해부학, 심리학, 첨단 AI 분석을 융합 연구하는 15년 경력의 관상 전문가입니다.\n"
+        "다음은 얼굴 정량 지표 JSON입니다. 전문가답게 해석해 주세요.\n" +
+        json.dumps(metrics, ensure_ascii=False)
+    )
+
+    try:
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                max_output_tokens=2048,
+                temperature=0.85
+            )
+        )
+        print("[응답 전체]", response)
+        print("[텍스트]", getattr(response, 'text', '없음'))
+        return response.text
+    except Exception as e:
+        print(f"[Gemini 오류] {e}")
+        raise RuntimeError("Gemini 호출 실패")
+
+
 
 LLM_FUNCS = {"gpt": gpt_call, "gemini": gemini_call}
 

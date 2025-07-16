@@ -6,3 +6,5 @@ opencv-python
 openai
 requests
 flask-cors
+google-generativeai
+
