@@ -20,7 +20,7 @@ from statistics import mean
 from openai import OpenAI
 import google.generativeai as genai
 import cv2, numpy as np, face_recognition, requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify 
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -237,7 +237,7 @@ def gpt_call(metrics: dict) -> str:
 
 def gemini_call(metrics: dict) -> str:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
     prompt = (
         "당신은 동서양 관상학, 인체 해부학, 심리학, 첨단 AI 분석을 융합 연구하는 15년 경력의 관상 전문가입니다.\n"
@@ -249,8 +249,6 @@ def gemini_call(metrics: dict) -> str:
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
-                max_output_tokens=2048,
-                temperature=0.85
             )
         )
         print("[응답 전체]", response)
