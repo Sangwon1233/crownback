@@ -227,33 +227,63 @@ def gpt_call(metrics: dict) -> str:
     )
     return resp.choices[0].message.content.strip()
 
-# def gemini_call(metrics: dict) -> str:
-#     url = "https://gemini.googleapis.com/v1/models/gemini-pro:generateText"
-#     hdr = {"Authorization":f"Bearer {GEMINI_API_KEY}","Content-Type":"application/json"}
-#     body = {"prompt":{"text":json.dumps(metrics, ensure_ascii=False)},"maxOutputTokens":512}
-#     r = requests.post(url, headers=hdr, json=body, timeout=30)
-#     r.raise_for_status()
-#     return r.json()["candidates"][0]["output"].strip()
 
+
+# ── Gemini 호출 (GPT와 동일한 프롬프트 철학 적용) ---------------------------
 def gemini_call(metrics: dict) -> str:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    
-    prompt = (
-        "당신은 동서양 관상학, 인체 해부학, 심리학, 첨단 AI 분석을 융합 연구하는 15년 경력의 관상 전문가입니다.\n"
-        "다음은 얼굴 정량 지표 JSON입니다. 전문가답게 해석해 주세요.\n" +
+
+    # Gemini 2.5 Flash 모델에 시스템 지침을 직접 설정
+    model = genai.GenerativeModel(
+        model_name="gemini-2.5-flash",
+
+        prompt_system = (
+            "당신은 동서양 관상학, 인체 해부학, 심리학, 첨단 AI 분석을 융합 연구하는 15년 경력의 \n"
+            "최고 수준 관상 전문가입니다. 사용자에게 신뢰감을 주기 위해 근거 기반 설명, 전문 용어, \n"
+            "균형 잡힌 긍·부정 포인트를 모두 제공해야 합니다. 분석은 다음 6개 섹션으로 구분해 주십시오:\n"
+            "1) 얼굴 전체 비례 · 균형 총평\n"
+            "2) 이목구비(눈·눈썹·코·입·턱) 세부 진단\n"
+            "3) 성격·심리적 성향 해석\n"
+            "4) 건강 및 생활 습관 시사점\n"
+            "5) 재물·커리어·대인운 전망\n"
+            "6) 삶의 질 향상을 위한 구체적 행동 가이드(3가지 이상)\n\n"
+            "작성 규칙:\n"
+            "• 최소 4000자 이상 (한국어)\n"
+            "• 각 섹션마다 소제목을 **굵게** 표시하지 말고 ‘[섹션명]’ 형태로 표기\n"
+            "• HTML/마크다운 태그 사용 금지, 순수 텍스트 출력\n"
+            "• 데이터 기반 수치(%)나 비율은 가능하면 제시\n"
+            "• 지나치게 단정적인 표현 대신 ‘~할 가능성이 높다’ 식의 확률적 어투 사용"
+        )
+    )
+
+    # 사용자 메시지: 지표 JSON만 전달 (GPT의 user 역할과 동일)
+    user_text = (
+        "아래는 얼굴 정량 지표 JSON입니다. 지표를 바탕으로 위 지침에 따라 깊이 있게 분석해 주세요.\n" +
         json.dumps(metrics, ensure_ascii=False)
     )
 
     try:
         response = model.generate_content(
-            prompt,
+            [user_text],
             generation_config=genai.types.GenerationConfig(
+                temperature=0.85,          # GPT와 유사
+                top_p=0.9,
+                top_k=40,
+                max_output_tokens=4096,    # 길게 출력 유도 (한도 내 조절)
             )
         )
-        print("[응답 전체]", response)
-        print("[텍스트]", getattr(response, 'text', '없음'))
-        return response.text
+        text = getattr(response, "text", None)
+        if not text:
+            # 후보가 여러 개인 경우를 대비 (안전망)
+            if hasattr(response, "candidates") and response.candidates:
+                parts = []
+                for c in response.candidates:
+                    if hasattr(c, "content") and getattr(c.content, "parts", None):
+                        parts.extend([p.text for p in c.content.parts if hasattr(p, "text")])
+                text = "\n".join([t for t in parts if t]) or ""
+        if not text:
+            raise RuntimeError("Gemini 응답에 텍스트가 비어 있습니다.")
+        return text.strip()
     except Exception as e:
         print(f"[Gemini 오류] {e}")
         raise RuntimeError("Gemini 호출 실패")
