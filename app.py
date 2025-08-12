@@ -30,8 +30,8 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-print("OPENAI_API_KEY : ", OPENAI_API_KEY)
-print("GEMINI_API_KEY : ", GEMINI_API_KEY)
+# print("OPENAI_API_KEY : ", OPENAI_API_KEY)
+# print("GEMINI_API_KEY : ", GEMINI_API_KEY)
 
 ALLOWED_EXT = {"jpg", "jpeg", "png"}
 MAX_IMG_SIZE = 2 * 1024 * 1024  # 2 MB
