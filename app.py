@@ -24,6 +24,11 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+
+ALLOWED_ORIGINS = [
+    "https://crown.unoeyhi.site",
+    "https://crownfront.netlify.app",   # 임시/프리뷰 쓰면 유지
+]
 # ── 설정 ------------------------------------------------------------------
 load_dotenv()
 
@@ -39,7 +44,16 @@ MAX_IMG_SIZE = 2 * 1024 * 1024  # 2 MB
 # ── Flask ----------------------------------------------------------------
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = MAX_IMG_SIZE
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(
+    app,
+    resources={r"/api/*": {"origins": ALLOWED_ORIGINS}},
+    supports_credentials=False,                 # 쿠키/세션 안 쓰면 False
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    max_age=86400,                              # preflight 캐시(선택)
+)
+
+# CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ── 유틸 -----------------------------------------------------------------
 
