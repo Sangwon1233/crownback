@@ -141,17 +141,30 @@ python extract_and_analyze.py --image test.jpg --output result.json
 * **대체 솔루션**: 설치 불가 시 Mediapipe 또는 AWS Rekognition 사용
 
 ---
+```
 # 종료
 pkill -f 'gunicorn --workers'
 
 # 실행
+cd /var/www/back
+
+# 1) (선택) 가상환경 활성화
 source venv/bin/activate
-nohup gunicorn --workers 2 --bind 0.0.0.0:5000 app:app > logs/back.log 2>&1 &
-echo $! > back.pid
+
+# 2) 로그 폴더 보장
+mkdir -p logs
+
+# 3) venv의 gunicorn으로 실행 (경로 확정)
+nohup venv/bin/gunicorn \
+  --workers 1 \
+  --worker-class gthread --threads 4 \
+  --timeout 120 --graceful-timeout 30 \
+  --max-requests 200 --max-requests-jitter 50 \
+  --bind 0.0.0.0:5000 app:app > logs/back.log 2>&1 & echo $! > back.pid
 
 # 상태 확인
 ps aux | grep gunicorn
 tail -n 30 logs/back.log
-
+```
 
 위 README를 참고하여 프로젝트를 설정하고, 얼굴 좌표 기반으로 GPT 관상 분석 파이프라인을 구축해 보세요!
